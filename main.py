@@ -74,8 +74,8 @@ def load_and_process_data():
     supp_path = "data/Suppliers (1).xlsx"
 
     # Đọc file excel
-    df_import_raw = pd.read_excel(dist_path)
-    df_export_raw = pd.read_excel(supp_path)
+    df_import_raw = pd.read_excel(supp_path)
+    df_export_raw = pd.read_excel(dist_path)
 
     # Chuẩn hóa tên cột
     df_import_std = standardize_columns(df_import_raw)

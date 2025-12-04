@@ -1,0 +1,16 @@
+version: '3'
+services:
+  binhdien_web:
+    build: .
+    container_name: binhdien_web
+    volumes:
+      - .:/www
+    expose:
+      - 8088
+    ports:
+      - "8088:8088"
+    environment:
+      TZ: "Asia/Bangkok"
+    #command: bash -c "python server.py"
+    command: bash -c "uvicorn main:app --host 0.0.0.0 --port 8088 --workers 5 --reload"
+    #command: bash -c "gunicorn main:app --workers 5 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:10802 --reload"
