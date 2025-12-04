@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Thống Kê Chợ Bình Điền</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        bd: {
+                            primary: '#0A2653',
+                            secondary: '#1e3a8a',
+                            accent: '#FDB414',
+                            light: '#f8fafc',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'card': '0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        /* Custom Scrollbar for table */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Glassmorphism header */
+        .glass-header {
+            background: rgba(10, 38, 83, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-bd-accent selection:text-bd-primary" x-data="dashboard()" x-init="fetchData()">
+
+    <!-- Header -->
+    <header class="glass-header text-white fixed top-0 w-full z-50 shadow-lg transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white p-1 rounded-lg shadow-sm">
+                        <img src="https://binhdien.txng.gov.vn/assets/layout/images/logo-bd.png" alt="Logo" class="h-8 w-auto object-contain">
+                    </div>
+                    <div class="hidden sm:block">
+                        <h1 class="text-lg font-bold tracking-tight">Thống Kê Giao Dịch</h1>
+                        <p class="text-[10px] text-blue-200 uppercase tracking-wider font-medium">Chợ Bình Điền • 01/12 - 15/12</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div class="sm:hidden text-right">
+                        <h1 class="text-sm font-bold leading-tight">Thống Kê</h1>
+                        <p class="text-[10px] text-blue-200">01/12 - 15/12</p>
+                    </div>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-bd-accent text-bd-primary shadow-sm whitespace-nowrap">
+                        <span class="w-1.5 h-1.5 rounded-full bg-bd-primary mr-1.5 animate-pulse"></span>
+                        Báo cáo 15 ngày
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 min-h-screen">
+        
+        <!-- Loading State -->
+        <div x-show="loading" class="flex flex-col items-center justify-center py-32" x-cloak>
+            <div class="relative">
+                <div class="w-16 h-16 border-4 border-bd-primary/20 border-t-bd-primary rounded-full animate-spin"></div>
+                <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                    <div class="w-2 h-2 bg-bd-accent rounded-full"></div>
+                </div>
+            </div>
+            <p class="mt-4 text-slate-500 font-medium animate-pulse">Đang tải dữ liệu...</p>
+        </div>
+
+        <div x-show="!loading" class="space-y-6" x-cloak>
+
+            <!-- Date Selector & Daily Stats -->
+            <div class="bg-white rounded-2xl shadow-card overflow-hidden border border-slate-100">
+                <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-bd-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Chọn Ngày Báo Cáo
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-1">Xem chi tiết số liệu theo từng ngày</p>
+                    </div>
+                    <div class="relative min-w-[200px]">
+                        <select class="w-full appearance-none bg-white border border-slate-300 text-slate-700 py-2.5 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-bd-primary/20 focus:border-bd-primary transition-shadow font-medium cursor-pointer hover:border-bd-primary" x-model="selectedDate">
+                            <template x-for="date in data.date_range" :key="date">
+                                <option x-text="date" :value="date"></option>
+                            </template>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-0 sm:divide-x divide-slate-100">
+                    <div class="p-6 hover:bg-slate-50 transition-colors group">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Tổng Lô Nhập</h3>
+                            <span class="p-1.5 bg-green-100 text-green-600 rounded-lg group-hover:scale-110 transition-transform">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <p class="text-3xl font-bold text-slate-800" x-text="selectedTotals.total_import"></p>
+                            <span class="text-sm font-medium text-slate-400">lô</span>
+                        </div>
+                        <div class="mt-2 w-full bg-slate-100 rounded-full h-1.5">
+                            <div class="bg-green-500 h-1.5 rounded-full" style="width: 70%"></div>
+                        </div>
+                    </div>
+
+                    <div class="p-6 hover:bg-slate-50 transition-colors group">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Tổng Lô Bán</h3>
+                            <span class="p-1.5 bg-orange-100 text-orange-600 rounded-lg group-hover:scale-110 transition-transform">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <p class="text-3xl font-bold text-slate-800" x-text="selectedTotals.total_sell"></p>
+                            <span class="text-sm font-medium text-slate-400">lô</span>
+                        </div>
+                        <div class="mt-2 w-full bg-slate-100 rounded-full h-1.5">
+                            <div class="bg-bd-accent h-1.5 rounded-full" style="width: 60%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Column: Summary & Top 3 -->
+                <div class="lg:col-span-4 space-y-6">
+                    
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Active Merchants -->
+                        <div class="bg-white p-5 rounded-2xl shadow-card border border-slate-100 relative overflow-hidden group">
+                            <div class="absolute right-0 top-0 h-full w-1 bg-bd-primary"></div>
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Thương Nhân Hoạt Động</p>
+                                    <div class="flex items-baseline gap-1">
+                                        <h3 class="text-2xl font-bold text-slate-800" x-text="data.summary.active_merchants"></h3>
+                                        <span class="text-sm text-slate-400" x-text="'/ ' + data.summary.total_merchants_list"></span>
+                                    </div>
+                                </div>
+                                <div class="p-2.5 bg-blue-50 text-bd-primary rounded-xl group-hover:bg-bd-primary group-hover:text-white transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Buy 15 Days -->
+                        <div class="bg-white p-5 rounded-2xl shadow-card border border-slate-100 relative overflow-hidden group">
+                            <div class="absolute right-0 top-0 h-full w-1 bg-green-500"></div>
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Tổng Lô Nhập (15 ngày)</p>
+                                    <h3 class="text-2xl font-bold text-green-600" x-text="data.summary.total_buy"></h3>
+                                </div>
+                                <div class="p-2.5 bg-green-50 text-green-600 rounded-xl group-hover:bg-green-600 group-hover:text-white transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7l4-4m0 0l4 4m-4-4v18" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Sell 15 Days -->
+                        <div class="bg-white p-5 rounded-2xl shadow-card border border-slate-100 relative overflow-hidden group">
+                            <div class="absolute right-0 top-0 h-full w-1 bg-bd-accent"></div>
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Tổng Lô Bán (15 ngày)</p>
+                                    <h3 class="text-2xl font-bold text-bd-accent" x-text="data.summary.total_sell"></h3>
+                                </div>
+                                <div class="p-2.5 bg-orange-50 text-orange-500 rounded-xl group-hover:bg-bd-accent group-hover:text-white transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 17l-4 4m0 0l-4-4m4 4V3" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top 3 Leaderboard -->
+                    <div class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-bd-primary to-bd-secondary text-white flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-bd-accent" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.699-3.181a1 1 0 011.827.954L17.12 6.245l1.699 3.181a1 1 0 01-1.827.954L13 8.823V17a1 1 0 01-2 0V8.823L7.046 10.38l-1.699 3.181a1 1 0 01-1.827-.954l1.699-3.181L1.354 6.245a1 1 0 011.827-.954L4.88 3.905 8.834 2.323V2a1 1 0 011-1z" clip-rule="evenodd" />
+                                </svg>
+                                <h3 class="font-bold text-sm uppercase tracking-wide">Top 3 Dẫn Đầu</h3>
+                            </div>
+                            <span class="text-[10px] bg-white/10 px-2 py-0.5 rounded text-white/80">Tích lũy</span>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <template x-for="(merchant, index) in top3Merchants" :key="merchant.name">
+                                <div class="relative flex items-center p-3 rounded-xl transition-all duration-200 hover:shadow-md"
+                                    :class="{ 
+                                        'bg-gradient-to-r from-yellow-50 to-white border border-yellow-100': index === 0, 
+                                        'bg-white border border-slate-100': index > 0 
+                                    }">
+                                    
+                                    <!-- Rank Badge -->
+                                    <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm relative z-10"
+                                        :class="{ 
+                                            'bg-gradient-to-br from-yellow-400 to-yellow-600 ring-2 ring-yellow-100': index === 0, 
+                                            'bg-gradient-to-br from-slate-300 to-slate-500': index === 1, 
+                                            'bg-gradient-to-br from-orange-300 to-orange-500': index === 2 
+                                        }">
+                                        <span x-text="index + 1" class="text-lg"></span>
+                                        <div x-show="index === 0" class="absolute -top-2 -right-1 text-yellow-500">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <div class="ml-4 flex-grow">
+                                        <h4 class="font-bold text-slate-800 text-sm truncate" x-text="merchant.name"></h4>
+                                        <div class="flex items-center mt-1">
+                                            <span class="text-xs text-slate-500 mr-2">Điểm:</span>
+                                            <span class="font-bold text-bd-primary text-sm" x-text="merchant.total_points"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="top3Merchants.length === 0" class="text-center text-slate-400 py-6 text-sm italic">
+                                Chưa có dữ liệu xếp hạng.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Detailed Table -->
+                <div class="lg:col-span-8">
+                    <div class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden flex flex-col h-full">
+                        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <span class="w-1.5 h-5 bg-bd-primary rounded-full"></span>
+                                Chi Tiết Giao Dịch
+                            </h2>
+                            <span class="text-xs font-medium px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-100">
+                                Ngày: <span x-text="selectedDate"></span>
+                            </span>
+                        </div>
+                        
+                        <!-- Responsive Table Container -->
+                        <div class="overflow-x-auto custom-scrollbar flex-grow">
+                            <table class="w-full text-left border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold tracking-wider sticky top-0 z-10">
+                                        <th class="p-4 border-b border-slate-200 w-12 text-center">#</th>
+                                        <th class="p-4 border-b border-slate-200">Thương Nhân</th>
+                                        <th class="p-4 border-b border-slate-200 w-20">Kiot</th>
+                                        <th class="p-4 border-b border-slate-200 text-center w-28">Nhập</th>
+                                        <th class="p-4 border-b border-slate-200 text-center w-28">Bán</th>
+                                        <th class="p-4 border-b border-slate-200 text-right w-32">Điểm Tích Lũy</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="(row, index) in selectedDayRows" :key="index">
+                                        <tr class="hover:bg-blue-50/30 transition-colors group">
+                                            <td class="p-4 text-center text-slate-400 text-sm font-medium" x-text="index + 1"></td>
+                                            <td class="p-4">
+                                                <div class="font-semibold text-slate-800 text-sm" x-text="row.merchant"></div>
+                                            </td>
+                                            <td class="p-4">
+                                                <span class="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded font-medium" x-text="row.kiot"></span>
+                                            </td>
+                                            <td class="p-4 text-center">
+                                                <span class="text-green-600 font-bold text-sm bg-green-50 px-2 py-1 rounded-md" x-text="row.total_import"></span>
+                                            </td>
+                                            <td class="p-4 text-center">
+                                                <span class="text-orange-500 font-bold text-sm bg-orange-50 px-2 py-1 rounded-md" x-text="row.total_sell"></span>
+                                            </td>
+                                            <td class="p-4 text-right">
+                                                <span class="text-bd-primary font-extrabold text-sm" x-text="row.cumulative_points"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <tr x-show="selectedDayRows.length === 0">
+                                        <td colspan="6" class="p-12 text-center">
+                                            <div class="flex flex-col items-center justify-center text-slate-400">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                                <p class="text-sm font-medium">Không có dữ liệu giao dịch cho ngày này.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <img src="https://binhdien.txng.gov.vn/assets/layout/images/logo-bd.png" alt="Logo" class="h-6 w-auto grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all">
+                <span class="text-xs text-slate-500 font-medium">© 2025 Chợ Đầu Mối Bình Điền</span>
+            </div>
+            <p class="text-xs text-slate-400">Hệ thống thống kê & báo cáo tự động</p>
+        </div>
+    </footer>
+
+    <script>
+        function dashboard() {
+            return {
+                loading: true,
+                data: {
+                    date_range: [],
+                    summary: { total_sell: 0, total_buy: 0, active_merchants: 0, total_merchants_list: 0 },
+                    merchants: [],
+                    top_products: { sell: {}, buy: {} },
+                    daily_totals: []
+                },
+                selectedDate: null,
+                get selectedTotals() {
+                    const row = (this.data.daily_totals || []).find(r => r.date === this.selectedDate);
+                    return row ? row : { total_import: 0, total_sell: 0 };
+                },
+                get selectedDayRows() {
+                    const entry = (this.data.daily_merchant || []).find(r => r.date === this.selectedDate);
+                    return entry ? entry.rows : [];
+                },
+                get top3Merchants() {
+                    return this.data.merchants.filter(m => m.total_points > 0).slice(0, 3);
+                },
+                async fetchData() {
+                    try {
+                        // Simulate a small delay for smooth transition if needed, or remove
+                        // await new Promise(r => setTimeout(r, 500)); 
+                        const response = await fetch('/api/dashboard-data');
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        this.data = await response.json();
+                        
+                        const now = new Date();
+                        const day = now.getDate();
+                        const month = now.getMonth() + 1;
+                        
+                        let defaultLabel;
+                        if (month === 12 && day >= 1 && day <= 15) {
+                            defaultLabel = String(day).padStart(2, '0') + '/12';
+                        } else {
+                            defaultLabel = '15/12';
+                        }
+                        
+                        this.data.date_range = this.data.date_range || [];
+                        
+                        this.selectedDate = this.data.date_range.includes(defaultLabel)
+                            ? defaultLabel
+                            : (this.data.date_range[0] || '01/12');
+                            
+                    } catch (error) {
+                        console.error('Error fetching data:', error);
+                        // Optional: Show error state in UI
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
