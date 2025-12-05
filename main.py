@@ -70,8 +70,8 @@ def generate_date_range_labels(year: int):
     return dates
 
 def load_and_process_data():
-    dist_path = "data/Distributors (1).xlsx"
-    supp_path = "data/Suppliers (1).xlsx"
+    dist_path = "data/Distributors.xlsx"
+    supp_path = "data/Suppliers.xlsx"
 
     # Đọc file excel
     df_import_raw = pd.read_excel(supp_path)
