@@ -176,7 +176,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
                 <!-- Left Column: Summary & Top 3 -->
-                <div class="lg:col-span-4 space-y-6">
+                <div class="lg:col-span-3 space-y-6">
                     
                     <!-- Summary Cards -->
                     <div class="grid grid-cols-1 gap-4">
@@ -283,7 +283,7 @@
                 </div>
 
                 <!-- Right Column: Detailed Table -->
-                <div class="lg:col-span-8">
+                <div class="lg:col-span-9">
                     <div class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden flex flex-col h-full">
                         <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -299,33 +299,33 @@
                         <div class="hidden md:block overflow-x-auto custom-scrollbar flex-grow">
                             <table class="w-full text-left border-collapse min-w-[600px]">
                                 <thead>
-                                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold tracking-wider sticky top-0 z-10">
+                                    <tr class="bg-gradient-to-r from-bd-primary/5 via-blue-50 to-bd-accent/10 text-slate-600 text-xs uppercase font-semibold tracking-wider sticky top-0 z-10">
                                         <th class="p-4 border-b border-slate-200 w-12 text-center">#</th>
-                                        <th class="p-4 border-b border-slate-200">Thương Nhân</th>
-                                        <th class="p-4 border-b border-slate-200 w-20">Kiot</th>
-                                        <th class="p-4 border-b border-slate-200 text-center w-28">Nhập</th>
-                                        <th class="p-4 border-b border-slate-200 text-center w-28">Bán</th>
-                                        <th class="p-4 border-b border-slate-200 text-center w-38">Điểm Tích Lũy</th>
+                                        <th class="p-4 border-b border-slate-200 text-bd-primary">Thương Nhân</th>
+                                        <th class="p-4 border-b border-slate-200 w-36 text-indigo-700">Kiot</th>
+                                        <th class="p-4 border-b border-slate-200 text-center w-28 text-green-700">Nhập</th>
+                                        <th class="p-4 border-b border-slate-200 text-center w-28 text-orange-700">Bán</th>
+                                        <th class="p-4 border-b border-slate-200 text-center w-36 text-bd-primary">Điểm Tích Lũy</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
                                     <template x-for="(row, index) in selectedDayRows" :key="index">
-                                        <tr class="hover:bg-blue-50/30 transition-colors group">
+                                        <tr class="odd:bg-white even:bg-blue-50/40 hover:bg-blue-50/60 transition-colors group">
                                             <td class="p-4 text-center text-slate-400 text-sm font-medium" x-text="index + 1"></td>
                                             <td class="p-4">
                                                 <div class="font-semibold text-slate-800 text-sm" x-text="row.merchant"></div>
                                             </td>
                                             <td class="p-4">
-                                                <span class="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded font-medium" x-text="row.kiot"></span>
+                                                <span class="inline-block px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs rounded font-medium whitespace-nowrap" x-text="row.kiot"></span>
                                             </td>
                                             <td class="p-4 text-center">
-                                                <span class="text-green-600 font-bold text-sm bg-green-50 px-2 py-1 rounded-md" x-text="row.total_import"></span>
+                                                <span class="text-green-700 font-bold text-sm bg-green-50 px-2 py-1 rounded-md border border-green-100" x-text="row.total_import"></span>
                                             </td>
                                             <td class="p-4 text-center">
-                                                <span class="text-orange-500 font-bold text-sm bg-orange-50 px-2 py-1 rounded-md" x-text="row.total_sell"></span>
+                                                <span class="text-orange-700 font-bold text-sm bg-orange-50 px-2 py-1 rounded-md border border-orange-100" x-text="row.total_sell"></span>
                                             </td>
                                             <td class="p-4 text-center">
-                                                <span class="text-bd-primary font-extrabold text-sm" x-text="row.cumulative_points"></span>
+                                                <span class="text-bd-primary font-extrabold text-sm bg-blue-50/50 px-2 py-1 rounded-md" x-text="row.cumulative_points"></span>
                                             </td>
                                         </tr>
                                     </template>
