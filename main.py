@@ -13,9 +13,7 @@ templates = Jinja2Templates(directory="templates")
 # --- DANH SÁCH 13 THƯƠNG NHÂN + MAP KIOT (chuẩn như trong notebook) ---
 NAME_TO_KIOT_RAW = {
     "TĂNG CẨM HẰNG": "T1-015",
-    "NGUYỄN THỊ NGỌC SƯƠNG": "TS-010",
     "NGUYỄN THỊ BÍCH VÂN": "T2-045",
-    "NGUYỄN HOÀNG NAM": "T1-019",
     "DƯƠNG MINH CƯỜNG": "T2-079",
     "ĐẶNG THỊ THÙY DƯƠNG": "NA-040-041",
     "PHẠM THỊ NGỌC THÚY": "NA-033-034",
