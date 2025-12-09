@@ -133,12 +133,7 @@ def load_and_process_data():
 
     year = pick_year(imp, exp)
 
-    # Khung ngày 1–15/12
-    date_range = pd.date_range(start=datetime(year, 12, 1), end=datetime(year, 12, 15), freq='D').date
-    idx = pd.MultiIndex.from_product([MERCHANTS_13, date_range], names=["merchant", "date"])
-    base = pd.DataFrame(index=idx).reset_index()
-
-    # Tổng theo ngày-bucket
+    # Tổng theo ngày-bucket (Global for reuse)
     imp_cnt = (
         imp.groupby(["merchant", "bucket_date"], dropna=False)
         .size().rename("total_import").reset_index()
@@ -150,18 +145,6 @@ def load_and_process_data():
         .rename(columns={"bucket_date": "date"})
     )
 
-    df_daily_totals = base.merge(imp_cnt, on=["merchant", "date"], how="left") \
-        .merge(exp_cnt, on=["merchant", "date"], how="left")
-    df_daily_totals[["total_import", "total_sell"]] = df_daily_totals[["total_import", "total_sell"]].fillna(0).astype(int)
-
-    # Tổng hợp cho từng thương nhân (toàn kỳ 1–15/12)
-    per_merchant = df_daily_totals.groupby("merchant")[["total_import", "total_sell"]].sum().reset_index()
-    per_merchant["total_points"] = per_merchant["total_import"] + per_merchant["total_sell"]
-    per_merchant = per_merchant.sort_values("total_points", ascending=False)
-
-    # Tổng theo ngày (toàn 13 thương)
-    per_date = df_daily_totals.groupby("date")[["total_import", "total_sell"]].sum().reset_index()
-
     # Top sản phẩm (dựa trên dữ liệu chuẩn hóa trước khi drop, và chỉ 13 thương nhân)
     def top_products(df_std: pd.DataFrame) -> dict:
         tmp = assign_canonical_merchant(df_std)
@@ -169,18 +152,115 @@ def load_and_process_data():
             return tmp["thuong_pham"].value_counts().head(5).to_dict()
         return {}
 
-    top_products_sell = top_products(df_import_std)
-    top_products_buy = top_products(df_export_std)
+    top_products_sell = top_products(df_export_std) # Export is Sell
+    top_products_buy = top_products(df_import_std)  # Import is Buy
 
-    results = {
-        "year": year,
-        "date_labels": generate_date_range_labels(year),
-        "df_daily_totals": df_daily_totals,
-        "per_merchant": per_merchant,
-        "per_date": per_date,
-        "top_products": {"sell": top_products_sell, "buy": top_products_buy},
+    # --- Helper to calculate stats for a date range ---
+    def calculate_period_stats(start_date: datetime.date, end_date: datetime.date, label: str):
+        # Filter date range
+        date_range = pd.date_range(start=start_date, end=end_date, freq='D').date
+        
+        # Base DataFrame for this range
+        idx = pd.MultiIndex.from_product([MERCHANTS_13, date_range], names=["merchant", "date"])
+        base = pd.DataFrame(index=idx).reset_index()
+        
+        # Merge counts
+        df_range = base.merge(imp_cnt, on=["merchant", "date"], how="left") \
+            .merge(exp_cnt, on=["merchant", "date"], how="left")
+        df_range[["total_import", "total_sell"]] = df_range[["total_import", "total_sell"]].fillna(0).astype(int)
+        
+        # Per merchant stats for this range
+        per_merchant = df_range.groupby("merchant")[["total_import", "total_sell"]].sum().reset_index()
+        per_merchant["total_points"] = per_merchant["total_import"] + per_merchant["total_sell"]
+        per_merchant = per_merchant.sort_values("total_points", ascending=False)
+        
+        # Per date stats for this range
+        per_date = df_range.groupby("date")[["total_import", "total_sell"]].sum().reset_index()
+        
+        # Summary for this range
+        summary = {
+            "total_sell": int(per_date["total_sell"].sum()),
+            "total_buy": int(per_date["total_import"].sum()),
+            # Active merchants: anyone with > 0 points in this period
+            "active_merchants": int((per_merchant["total_points"] > 0).sum()),
+            "total_merchants_list": len(MERCHANTS_13),
+        }
+        
+        # Merchants list
+        merchants_list = []
+        for _, row in per_merchant.iterrows():
+            merchants_list.append({
+                "name": row["merchant"],
+                "sell": int(row["total_sell"]),
+                "buy": int(row["total_import"]),
+                "total_points": int(row["total_points"]),
+            })
+            
+        # Daily totals list
+        daily_list = []
+        for _, r in per_date.sort_values("date").iterrows():
+            daily_list.append({
+                "date": r["date"].strftime("%d/%m"),
+                "total_import": int(r["total_import"]),
+                "total_sell": int(r["total_sell"]),
+            })
+            
+        # Daily merchant details
+        daily_merchant_details = [
+            {
+                "date": r_date.strftime("%d/%m"),
+                "rows": [
+                    (lambda day_rows: {
+                        "merchant": m,
+                        "kiot": NAME_TO_KIOT_RAW.get(m, ""),
+                        "total_import": int(day_rows["total_import"].sum()),
+                        "total_sell": int(day_rows["total_sell"].sum()),
+                        # Cumulative points up to this date within the period??
+                        # Usually "tích điểm" is cumulative from start of program.
+                        # However, for split view, it's ambiguous.
+                        # Let's calculate cumulative from START OF THIS PERIOD to show progress within period.
+                        "cumulative_points": int(df_range.loc[(df_range["merchant"] == m) & (df_range["date"] <= r_date), ["total_import", "total_sell"]].sum().sum()),
+                    })(df_range.loc[(df_range["merchant"] == m) & (df_range["date"] == r_date)])
+                    for m in MERCHANTS_13
+                ]
+            }
+            for r_date in date_range
+        ]
+
+        return {
+            "label": label,
+            "summary": summary,
+            "merchants": merchants_list, # Leaderboard for this period
+            "daily_totals": daily_list,
+            "date_range_labels": [d.strftime("%d/%m") for d in date_range],
+            "daily_merchant": daily_merchant_details
+        }
+
+    # Define ranges
+    # Week 1: 1/12 -> 8/12
+    # Week 2: 9/12 -> 15/12
+    d1 = datetime(year, 12, 1).date()
+    d2 = datetime(year, 12, 8).date()
+    d2_start = datetime(year, 12, 9).date()
+    d3 = datetime(year, 12, 15).date()
+    
+    week1_stats = calculate_period_stats(d1, d2, "Giai đoạn 1 (01/12 - 08/12)")
+    week2_stats = calculate_period_stats(d2_start, d3, "Giai đoạn 2 (09/12 - 15/12)")
+
+    # Legacy results (calculate full 1-15 for fallback or "All" view if needed internally, but we focus on split)
+    # Actually, we can just return the periods.
+
+    return {
+        "periods": {
+            "week1": week1_stats,
+            "week2": week2_stats
+        },
+        "top_products": {"sell": top_products_sell, "buy": top_products_buy}, # Top products remain global for simplicity or per period? 
+        # Requirement: "Thống kê tích điểm, số lượng mua bán sẽ chia ra 2 tuần"
+        # Since products are minor part, keeping global is safer unless asked. 
+        # But logically, products might shift. However, data model for top_products in original code was global.
+        # Let's keep top_products global for now to minimize risk, as it wasn't explicitly asked to split.
     }
-    return results
 
 @app.get("/")
 async def read_root(request: Request):
@@ -189,63 +269,7 @@ async def read_root(request: Request):
 @app.get("/api/dashboard-data")
 async def get_dashboard_data():
     data = load_and_process_data()
-
-    # Summary
-    total_sell = int(data["per_date"]["total_sell"].sum())
-    total_buy = int(data["per_date"]["total_import"].sum())
-
-    # Merchants list for UI
-    merchants = []
-    for _, row in data["per_merchant"].iterrows():
-        merchants.append({
-            "name": row["merchant"],
-            "sell": int(row["total_sell"]),
-            "buy": int(row["total_import"]),
-            "total_points": int(row["total_points"]),
-        })
-
-    active_merchants = sum(1 for m in merchants if (m["sell"] + m["buy"]) > 0)
-
-    # Daily totals array for UI
-    daily_totals = []
-    for _, r in data["per_date"].sort_values("date").iterrows():
-        daily_totals.append({
-            "date": r["date"].strftime("%d/%m"),
-            "total_import": int(r["total_import"]),
-            "total_sell": int(r["total_sell"]),
-        })
-
-    return JSONResponse(content={
-        "date_range": data["date_labels"],
-        "summary": {
-            "total_sell": total_sell,
-            "total_buy": total_buy,
-            "active_merchants": active_merchants,
-            "total_merchants_list": len(MERCHANTS_13),
-        },
-        "merchants": merchants,
-        "top_products": data["top_products"],
-        "daily_totals": daily_totals,
-        # Bổ sung chi tiết theo ngày: merchant + kiot + totals + cumulative_points đến ngày chọn
-        "daily_merchant": [
-            {
-                "date": r_date.strftime("%d/%m"),
-                "rows": [
-                    (lambda day_rows_for_merchant: {
-                        "merchant": m,
-                        "kiot": NAME_TO_KIOT_RAW.get(m, ""),
-                        "total_import": int(day_rows_for_merchant["total_import"].sum()),
-                        "total_sell": int(day_rows_for_merchant["total_sell"].sum()),
-                        "cumulative_points": int(df_all.loc[(df_all["merchant"] == m) & (df_all["date"] <= r_date), ["total_import", "total_sell"]].sum().sum()),
-                    })(df_all.loc[(df_all["merchant"] == m) & (df_all["date"] == r_date)])
-                    for m in MERCHANTS_13
-                ]
-            }
-            for r_date, df_all in (
-                (d, data["df_daily_totals"]) for d in data["per_date"]["date"].tolist()
-            )
-        ],
-    })
+    return JSONResponse(content=data)
 
 if __name__ == "__main__":
     import uvicorn
